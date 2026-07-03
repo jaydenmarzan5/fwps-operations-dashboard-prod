@@ -649,3 +649,23 @@ textarea {
 .signOutButton:hover {
   background: rgba(255, 255, 255, 0.14);
 }
+
+.userRoleCard {
+  margin-top: 18px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #dbeafe;
+}
+
+.userRoleCard strong {
+  display: block;
+}
+
+.userRoleCard span {
+  display: block;
+  margin-top: 4px;
+  color: #b6c3d6;
+  text-transform: capitalize;
+  font-size: 13px;
+}

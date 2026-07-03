@@ -1,5 +1,6 @@
 "use client";
 
+import { getCurrentUserProfile } from "@/lib/auth";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
@@ -12,6 +13,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const isLoginPage = pathname === "/login";
   const [checkingAuth, setCheckingAuth] = useState(!isLoginPage);
+  const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
     async function protectRoute() {
@@ -27,10 +29,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         return;
       }
 
+    const userProfile = await getCurrentUserProfile();
+console.log("Loaded profile:", userProfile);
+setProfile(userProfile);
+
       setCheckingAuth(false);
     }
 
     protectRoute();
+
   }, [isLoginPage, router]);
 
   if (checkingAuth) {
@@ -66,9 +73,16 @@ async function handleSignOut() {
           <Link className="navLink" href="/summary">End-of-Day</Link>
         </nav>
 
+{profile ? (
+  <div className="userRoleCard">
+    <strong>{profile.full_name}</strong>
+    <span>{profile.role}</span>
+  </div>
+) : null}
+
         <button className="signOutButton" onClick={handleSignOut}>
   Sign Out
-  
+
 </button>
       </aside>
 
