@@ -11,6 +11,7 @@ import { SchoolStatus } from "@/components/SchoolStatus";
 import { UpdateCard } from "@/components/UpdateCard";
 import { CowTotalHistory } from "@/components/CowTotalHistory";
 import { PageTransition } from "@/components/PageTransition";
+import { AnimatePresence, motion } from "framer-motion";
 
 export default function SchoolDetailPage() {
   const [schools, setSchools] = useState<School[]>([]);
@@ -297,36 +298,6 @@ export default function SchoolDetailPage() {
                 </div>
               </div>
 
-              {editingTotalCows ? (
-                <div className="cowEditCard">
-                  <div>
-                    <strong>Edit Total COWs</strong>
-                    <p className="muted">Current total: {selectedSchool.total_cows}</p>
-                  </div>
-                  <input
-                    type="number"
-                    min={selectedSchool.completed_cows}
-                    value={totalCowsDraft}
-                    onChange={(e) => setTotalCowsDraft(e.target.value)}
-                    aria-label="New total COW count"
-                  />
-                  <textarea
-                    value={totalCowsReason}
-                    onChange={(e) => setTotalCowsReason(e.target.value)}
-                    placeholder="Reason for change (optional)"
-                    aria-label="Reason for changing total COW count"
-                  />
-                  <div className="cowEditActions">
-                    <button className="secondaryButton" onClick={cancelEditingTotalCows} disabled={savingTotalCows}>
-                      Cancel
-                    </button>
-                    <button className="primaryButton" onClick={saveTotalCows} disabled={savingTotalCows}>
-                      {savingTotalCows ? "Saving..." : "Save"}
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-
               <ProgressBar school={selectedSchool} large />
 
               <h3>Current Status</h3>
@@ -356,6 +327,63 @@ export default function SchoolDetailPage() {
           )}
         </section>
       </section>
+
+      <AnimatePresence>
+        {editingTotalCows && selectedSchool ? (
+          <motion.div
+            className="modalOverlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+          >
+            <motion.div
+              className="modal cowEditModal"
+              initial={{ opacity: 0, y: 16, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.96 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+            >
+              <div>
+                <h2>Edit Total COWs</h2>
+                <p className="muted">
+                  {selectedSchool.name} · Current total: {selectedSchool.total_cows}
+                </p>
+              </div>
+
+              <label>
+                New Total COW Count
+                <input
+                  type="number"
+                  min={selectedSchool.completed_cows}
+                  value={totalCowsDraft}
+                  onChange={(e) => setTotalCowsDraft(e.target.value)}
+                  aria-label="New total COW count"
+                />
+              </label>
+
+              <label>
+                Reason for Change
+                <textarea
+                  value={totalCowsReason}
+                  onChange={(e) => setTotalCowsReason(e.target.value)}
+                  placeholder="Optional, but recommended for audit history"
+                  aria-label="Reason for changing total COW count"
+                />
+              </label>
+
+              <div className="modalActions">
+                <button className="secondaryButton" onClick={cancelEditingTotalCows} disabled={savingTotalCows}>
+                  Cancel
+                </button>
+                <button className="primaryButton" onClick={saveTotalCows} disabled={savingTotalCows}>
+                  {savingTotalCows ? "Saving..." : "Save Change"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </PageTransition>
   );
 }
