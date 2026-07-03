@@ -580,3 +580,72 @@ textarea {
   .topbar { align-items: stretch; flex-direction: column; }
   .toast { left: 16px; right: 16px; bottom: 18px; min-width: auto; }
 }
+
+.loginPage {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--bg);
+}
+
+.loginCard {
+  width: min(420px, 100%);
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.12);
+  padding: 28px;
+  display: grid;
+  gap: 18px;
+  text-align: center;
+}
+
+.loginCard img {
+  margin: 0 auto;
+}
+
+.loginCard h1 {
+  font-size: 26px;
+  margin: 0;
+}
+
+.loginCard p {
+  color: var(--muted);
+  margin: 6px 0 0;
+}
+
+.loginCard label {
+  display: grid;
+  gap: 8px;
+  text-align: left;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.loginError {
+  color: var(--red);
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  padding: 10px;
+  margin: 0;
+  font-weight: 700;
+  text-align: left;
+}
+
+.signOutButton {
+  margin-top: 18px;
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+  color: #dbeafe;
+  padding: 12px;
+  border-radius: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.signOutButton:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
