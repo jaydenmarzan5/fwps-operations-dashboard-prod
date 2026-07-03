@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { getCurrentUserProfile } from "@/lib/auth";
 import type { Area, School, Update } from "@/types/database";
 import { progressPercent, remainingCows, sortSchoolsByProgress } from "@/lib/utils";
 import { Topbar } from "@/components/Topbar";
@@ -16,7 +17,12 @@ export default function SchoolDetailPage() {
   const [selectedArea, setSelectedArea] = useState("Area 4");
   const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-
+  const [profile, setProfile] = useState<any>(null);
+  const [editingTotalCows, setEditingTotalCows] = useState(false);
+  const [totalCowsDraft, setTotalCowsDraft] = useState("");
+  const [totalCowsReason, setTotalCowsReason] = useState("");
+  const [savingTotalCows, setSavingTotalCows] = useState(false);
+  
   async function loadData() {
     const [{ data: schoolsData }, { data: areasData }, { data: updatesData }] = await Promise.all([
       supabase.from("schools").select("*, areas(*)").order("name"),
@@ -29,8 +35,14 @@ export default function SchoolDetailPage() {
     setUpdates((updatesData ?? []) as Update[]);
   }
 
+  async function loadProfile() {
+    const userProfile = await getCurrentUserProfile();
+    setProfile(userProfile);
+  }
+
   useEffect(() => {
     loadData();
+    loadProfile();
 
     const channel = supabase
       .channel("school-detail")
@@ -68,6 +80,77 @@ export default function SchoolDetailPage() {
   const schoolUpdates = selectedSchool
     ? updates.filter((update) => update.school_id === selectedSchool.id)
     : [];
+
+  const canEditTotalCows = profile?.role === "supervisor" || profile?.role === "admin";
+
+  function startEditingTotalCows() {
+    if (!selectedSchool) return;
+    setTotalCowsDraft(String(selectedSchool.total_cows));
+    setTotalCowsReason("");
+    setEditingTotalCows(true);
+  }
+
+  function cancelEditingTotalCows() {
+    setEditingTotalCows(false);
+    setTotalCowsDraft("");
+    setTotalCowsReason("");
+  }
+
+  async function saveTotalCows() {
+    if (!selectedSchool) return;
+
+    const nextTotal = Number(totalCowsDraft);
+
+    if (!Number.isInteger(nextTotal) || nextTotal < selectedSchool.completed_cows) {
+      alert("Total COWs must be a whole number greater than or equal to completed COWs.");
+      return;
+    }
+
+    setSavingTotalCows(true);
+
+    const previousTotal = selectedSchool.total_cows;
+
+    const { error: updateError } = await supabase
+      .from("schools")
+      .update({ total_cows: nextTotal })
+      .eq("id", selectedSchool.id);
+
+    if (updateError) {
+      setSavingTotalCows(false);
+      console.error(updateError);
+      alert("Unable to update total COWs. Please try again.");
+      return;
+    }
+
+    const { data: userData } = await supabase.auth.getUser();
+
+    const { error: logError } = await supabase
+      .from("cow_total_changes")
+      .insert({
+        school_id: selectedSchool.id,
+        changed_by: userData.user?.id ?? null,
+        old_total: previousTotal,
+        new_total: nextTotal,
+        reason: totalCowsReason.trim() || null,
+      });
+
+    setSavingTotalCows(false);
+
+    if (logError) {
+      console.error(logError);
+      alert("The COW total was updated, but the change log could not be saved.");
+    }
+
+    setSchools((currentSchools) =>
+      currentSchools.map((school) =>
+        school.id === selectedSchool.id ? { ...school, total_cows: nextTotal } : school
+      )
+    );
+
+    setEditingTotalCows(false);
+    setTotalCowsDraft("");
+    setTotalCowsReason("");
+  }
 
   return (
     <>
@@ -135,7 +218,12 @@ export default function SchoolDetailPage() {
                   <h2>{selectedSchool.name}<span className="codePill">{selectedSchool.code}</span></h2>
                   <p className="muted">{selectedSchool.areas?.name ?? "Unassigned"} · {selectedSchool.total_cows} COWs</p>
                 </div>
-                <button className="secondaryButton" onClick={() => setSelectedSchoolId(null)}>Back to Area Snapshot</button>
+                <div className="panelActions">
+                  {canEditTotalCows ? (
+                    <button className="secondaryButton" onClick={startEditingTotalCows}>Edit Total COWs</button>
+                  ) : null}
+                  <button className="secondaryButton" onClick={() => setSelectedSchoolId(null)}>Back to Area Snapshot</button>
+                </div>
               </div>
 
               <div className="detailGrid">
@@ -144,6 +232,34 @@ export default function SchoolDetailPage() {
                 <div><span>Remaining COWs</span><strong>{remainingCows(selectedSchool)}</strong></div>
                 <div><span>Damaged Devices</span><strong>{selectedSchool.damaged_devices}</strong></div>
               </div>
+
+              {editingTotalCows ? (
+                <div className="cowEditCard">
+                  <div>
+                    <strong>Edit Total COWs</strong>
+                    <p className="muted">Current total: {selectedSchool.total_cows}</p>
+                  </div>
+                  <input
+                    type="number"
+                    min={selectedSchool.completed_cows}
+                    value={totalCowsDraft}
+                    onChange={(e) => setTotalCowsDraft(e.target.value)}
+                    aria-label="New total COW count"
+                  />
+                  <textarea
+                    value={totalCowsReason}
+                    onChange={(e) => setTotalCowsReason(e.target.value)}
+                    placeholder="Reason for change (optional)"
+                    aria-label="Reason for changing total COW count"
+                  />
+                  <div className="cowEditActions">
+                    <button className="secondaryButton" onClick={cancelEditingTotalCows} disabled={savingTotalCows}>Cancel</button>
+                    <button className="primaryButton" onClick={saveTotalCows} disabled={savingTotalCows}>
+                      {savingTotalCows ? "Saving..." : "Save"}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
 
               <ProgressBar school={selectedSchool} large />
 
