@@ -4,11 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { getCurrentUserProfile } from "@/lib/auth";
 import type { Area, School, Update, CowTotalChange } from "@/types/database";
-import { formatDateTime, progressPercent, remainingCows, sortSchoolsByProgress } from "@/lib/utils";
+import { progressPercent, remainingCows, sortSchoolsByProgress } from "@/lib/utils";
 import { Topbar } from "@/components/Topbar";
 import { ProgressBar } from "@/components/ProgressBar";
 import { SchoolStatus } from "@/components/SchoolStatus";
 import { UpdateCard } from "@/components/UpdateCard";
+import { CowTotalHistory } from "@/components/CowTotalHistory";
 
 export default function SchoolDetailPage() {
   const [schools, setSchools] = useState<School[]>([]);
@@ -23,23 +24,23 @@ export default function SchoolDetailPage() {
   const [totalCowsDraft, setTotalCowsDraft] = useState("");
   const [totalCowsReason, setTotalCowsReason] = useState("");
   const [savingTotalCows, setSavingTotalCows] = useState(false);
-  
+
   async function loadData() {
-    const [
-      { data: schoolsData },
-      { data: areasData },
-      { data: updatesData },
-      { data: cowTotalChangesData }
-    ] = await Promise.all([
-      supabase.from("schools").select("*, areas(*)").order("name"),
-      supabase.from("areas").select("*").order("name"),
-      supabase.from("updates").select("*, schools(id, name, code, area_id)").order("created_at", { ascending: false }).limit(50),
-      supabase
-        .from("cow_total_changes")
-        .select("*, profiles(full_name, role)")
-        .order("created_at", { ascending: false })
-        .limit(50),
-    ]);
+    const [{ data: schoolsData }, { data: areasData }, { data: updatesData }, { data: cowTotalChangesData }] =
+      await Promise.all([
+        supabase.from("schools").select("*, areas(*)").order("name"),
+        supabase.from("areas").select("*").order("name"),
+        supabase
+          .from("updates")
+          .select("*, schools(id, name, code, area_id)")
+          .order("created_at", { ascending: false })
+          .limit(50),
+        supabase
+          .from("cow_total_changes")
+          .select("*, profiles(full_name, role)")
+          .order("created_at", { ascending: false })
+          .limit(50),
+      ]);
 
     setSchools((schoolsData ?? []) as School[]);
     setAreas((areasData ?? []) as Area[]);
@@ -90,9 +91,7 @@ export default function SchoolDetailPage() {
     return { count, avg, completedCows, totalCows, damaged };
   }, [filteredSchools]);
 
-  const schoolUpdates = selectedSchool
-    ? updates.filter((update) => update.school_id === selectedSchool.id)
-    : [];
+  const schoolUpdates = selectedSchool ? updates.filter((update) => update.school_id === selectedSchool.id) : [];
 
   const schoolCowTotalChanges = selectedSchool
     ? cowTotalChanges.filter((change) => change.school_id === selectedSchool.id)
@@ -141,15 +140,13 @@ export default function SchoolDetailPage() {
 
     const { data: userData } = await supabase.auth.getUser();
 
-    const { error: logError } = await supabase
-      .from("cow_total_changes")
-      .insert({
-        school_id: selectedSchool.id,
-        changed_by: userData.user?.id ?? null,
-        old_total: previousTotal,
-        new_total: nextTotal,
-        reason: totalCowsReason.trim() || null,
-      });
+    const { error: logError } = await supabase.from("cow_total_changes").insert({
+      school_id: selectedSchool.id,
+      changed_by: userData.user?.id ?? null,
+      old_total: previousTotal,
+      new_total: nextTotal,
+      reason: totalCowsReason.trim() || null,
+    });
 
     setSavingTotalCows(false);
 
@@ -159,9 +156,7 @@ export default function SchoolDetailPage() {
     }
 
     setSchools((currentSchools) =>
-      currentSchools.map((school) =>
-        school.id === selectedSchool.id ? { ...school, total_cows: nextTotal } : school
-      )
+      currentSchools.map((school) => (school.id === selectedSchool.id ? { ...school, total_cows: nextTotal } : school))
     );
 
     setEditingTotalCows(false);
@@ -185,10 +180,14 @@ export default function SchoolDetailPage() {
               }}
             >
               <option>All Areas</option>
-              {areas.map((area) => <option key={area.id}>{area.name}</option>)}
+              {areas.map((area) => (
+                <option key={area.id}>{area.name}</option>
+              ))}
             </select>
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search school or code..." />
-            <button className="secondaryButton" onClick={() => setSelectedSchoolId(null)}>View Area Snapshot</button>
+            <button className="secondaryButton" onClick={() => setSelectedSchoolId(null)}>
+              View Area Snapshot
+            </button>
           </div>
 
           <div className="schoolList">
@@ -199,8 +198,14 @@ export default function SchoolDetailPage() {
                 className={`schoolItem ${selectedSchool?.id === school.id ? "schoolItemActive" : ""}`}
                 onClick={() => setSelectedSchoolId(school.id)}
               >
-                <div className="schoolName">{school.name}<span className="codePill">{school.code}</span></div>
-                <div className="small">{school.areas?.name ?? "Unassigned"} · {progressPercent(school)}% · {school.completed_cows}/{school.total_cows} COWs</div>
+                <div className="schoolName">
+                  {school.name}
+                  <span className="codePill">{school.code}</span>
+                </div>
+                <div className="small">
+                  {school.areas?.name ?? "Unassigned"} · {progressPercent(school)}% · {school.completed_cows}/
+                  {school.total_cows} COWs
+                </div>
                 <SchoolStatus school={school} />
               </button>
             ))}
@@ -212,16 +217,34 @@ export default function SchoolDetailPage() {
             <>
               <h2>{selectedArea === "All Areas" ? "All Areas Snapshot" : `${selectedArea} Snapshot`}</h2>
               <div className="detailGrid">
-                <div><span>Schools in View</span><strong>{areaStats.count}</strong></div>
-                <div><span>Avg. Progress</span><strong>{areaStats.avg}%</strong></div>
-                <div><span>COWs Completed</span><strong>{areaStats.completedCows} / {areaStats.totalCows}</strong></div>
-                <div><span>Damaged Devices</span><strong>{areaStats.damaged}</strong></div>
+                <div>
+                  <span>Schools in View</span>
+                  <strong>{areaStats.count}</strong>
+                </div>
+                <div>
+                  <span>Avg. Progress</span>
+                  <strong>{areaStats.avg}%</strong>
+                </div>
+                <div>
+                  <span>COWs Completed</span>
+                  <strong>
+                    {areaStats.completedCows} / {areaStats.totalCows}
+                  </strong>
+                </div>
+                <div>
+                  <span>Damaged Devices</span>
+                  <strong>{areaStats.damaged}</strong>
+                </div>
               </div>
+
               <h3>Area Progress Snapshot</h3>
               <div className="snapshot">
                 {filteredSchools.map((school) => (
                   <div className="snapshotRow" key={school.id}>
-                    <span>{school.name}<span className="codePill">{school.code}</span></span>
+                    <span>
+                      {school.name}
+                      <span className="codePill">{school.code}</span>
+                    </span>
                     <strong>{progressPercent(school)}%</strong>
                     <ProgressBar school={school} />
                   </div>
@@ -232,22 +255,45 @@ export default function SchoolDetailPage() {
             <>
               <div className="panelHead">
                 <div>
-                  <h2>{selectedSchool.name}<span className="codePill">{selectedSchool.code}</span></h2>
-                  <p className="muted">{selectedSchool.areas?.name ?? "Unassigned"} · {selectedSchool.total_cows} COWs</p>
+                  <h2>
+                    {selectedSchool.name}
+                    <span className="codePill">{selectedSchool.code}</span>
+                  </h2>
+                  <p className="muted">
+                    {selectedSchool.areas?.name ?? "Unassigned"} · {selectedSchool.total_cows} COWs
+                  </p>
                 </div>
                 <div className="panelActions">
                   {canEditTotalCows ? (
-                    <button className="secondaryButton" onClick={startEditingTotalCows}>Edit Total COWs</button>
+                    <button className="secondaryButton" onClick={startEditingTotalCows}>
+                      Edit Total COWs
+                    </button>
                   ) : null}
-                  <button className="secondaryButton" onClick={() => setSelectedSchoolId(null)}>Back to Area Snapshot</button>
+                  <button className="secondaryButton" onClick={() => setSelectedSchoolId(null)}>
+                    Back to Area Snapshot
+                  </button>
                 </div>
               </div>
 
               <div className="detailGrid">
-                <div><span>Progress</span><strong>{progressPercent(selectedSchool)}%</strong></div>
-                <div><span>COWs Completed</span><strong>{selectedSchool.completed_cows} / {selectedSchool.total_cows}</strong></div>
-                <div><span>Remaining COWs</span><strong>{remainingCows(selectedSchool)}</strong></div>
-                <div><span>Damaged Devices</span><strong>{selectedSchool.damaged_devices}</strong></div>
+                <div>
+                  <span>Progress</span>
+                  <strong>{progressPercent(selectedSchool)}%</strong>
+                </div>
+                <div>
+                  <span>COWs Completed</span>
+                  <strong>
+                    {selectedSchool.completed_cows} / {selectedSchool.total_cows}
+                  </strong>
+                </div>
+                <div>
+                  <span>Remaining COWs</span>
+                  <strong>{remainingCows(selectedSchool)}</strong>
+                </div>
+                <div>
+                  <span>Damaged Devices</span>
+                  <strong>{selectedSchool.damaged_devices}</strong>
+                </div>
               </div>
 
               {editingTotalCows ? (
@@ -270,7 +316,9 @@ export default function SchoolDetailPage() {
                     aria-label="Reason for changing total COW count"
                   />
                   <div className="cowEditActions">
-                    <button className="secondaryButton" onClick={cancelEditingTotalCows} disabled={savingTotalCows}>Cancel</button>
+                    <button className="secondaryButton" onClick={cancelEditingTotalCows} disabled={savingTotalCows}>
+                      Cancel
+                    </button>
                     <button className="primaryButton" onClick={saveTotalCows} disabled={savingTotalCows}>
                       {savingTotalCows ? "Saving..." : "Save"}
                     </button>
@@ -283,35 +331,25 @@ export default function SchoolDetailPage() {
               <h3>Current Status</h3>
               <div className="notesList">
                 <div className="noteCard">
-                  <strong>{selectedSchool.completed_cows} of {selectedSchool.total_cows} COWs completed</strong>
-                  <div>{remainingCows(selectedSchool)} COWs remaining. {selectedSchool.damaged_devices} damaged devices currently reported.</div>
+                  <strong>
+                    {selectedSchool.completed_cows} of {selectedSchool.total_cows} COWs completed
+                  </strong>
+                  <div>
+                    {remainingCows(selectedSchool)} COWs remaining. {selectedSchool.damaged_devices} damaged devices
+                    currently reported.
+                  </div>
                 </div>
               </div>
 
-              <h3>COW Total Change History</h3>
-              <div className="notesList">
-                {schoolCowTotalChanges.length ? (
-                  schoolCowTotalChanges.map((change) => (
-                    <div className="noteCard" key={change.id}>
-                      <strong>
-                        Total COWs changed from {change.old_total} to {change.new_total}
-                      </strong>
-                      <div>
-                        {change.reason ? `Reason: ${change.reason}` : "No reason provided."}
-                      </div>
-                      <div className="noteMeta">
-                        {change.profiles?.full_name ?? "Unknown user"} · {formatDateTime(change.created_at)}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="empty">No COW total changes recorded for this school yet.</div>
-                )}
-              </div>
+              <CowTotalHistory changes={schoolCowTotalChanges} />
 
               <h3>Recent Updates</h3>
               <div className="notesList">
-                {schoolUpdates.length ? schoolUpdates.map((update) => <UpdateCard key={update.id} update={update} />) : <div className="empty">No updates recorded for this school yet.</div>}
+                {schoolUpdates.length ? (
+                  schoolUpdates.map((update) => <UpdateCard key={update.id} update={update} />)
+                ) : (
+                  <div className="empty">No updates recorded for this school yet.</div>
+                )}
               </div>
             </>
           )}
