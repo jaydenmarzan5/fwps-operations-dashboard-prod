@@ -10,6 +10,7 @@ import { ProgressBar } from "@/components/ProgressBar";
 import { SchoolStatus } from "@/components/SchoolStatus";
 import { UpdateCard } from "@/components/UpdateCard";
 import { CowTotalHistory } from "@/components/CowTotalHistory";
+import { PageTransition } from "@/components/PageTransition";
 
 export default function SchoolDetailPage() {
   const [schools, setSchools] = useState<School[]>([]);
@@ -165,7 +166,7 @@ export default function SchoolDetailPage() {
   }
 
   return (
-    <>
+    <PageTransition>
       <Topbar title="School Detail" subtitle="School and Area Progress" />
 
       <section className="detailLayout">
@@ -355,6 +356,6 @@ export default function SchoolDetailPage() {
           )}
         </section>
       </section>
-    </>
+    </PageTransition>
   );
 }

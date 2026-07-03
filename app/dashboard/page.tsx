@@ -1,5 +1,6 @@
 "use client";
 
+
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { Area, School } from "@/types/database";
@@ -7,6 +8,7 @@ import { progressPercent, sortSchoolsByProgress, statusForSchool } from "@/lib/u
 import { Topbar } from "@/components/Topbar";
 import { ProgressBar } from "@/components/ProgressBar";
 import { SchoolStatus } from "@/components/SchoolStatus";
+import { PageTransition } from "@/components/PageTransition";
 
 export default function DashboardPage() {
   const [schools, setSchools] = useState<School[]>([]);
@@ -67,7 +69,7 @@ export default function DashboardPage() {
   const lowestProgress = [...filtered].sort((a, b) => progressPercent(a) - progressPercent(b))[0];
 
   return (
-    <>
+    <PageTransition>
       <Topbar
         title="Dashboard"
         subtitle="District Chromebook Refresh"
@@ -146,6 +148,6 @@ export default function DashboardPage() {
           </div>
         </aside>
       </section>
-    </>
+    </PageTransition>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { Area, School } from "@/types/database";
 import { Topbar } from "@/components/Topbar";
+import { PageTransition } from "@/components/PageTransition";
 
 type PendingAction = {
   school: School;
@@ -128,7 +129,7 @@ export default function InternUpdatePage() {
   }
 
   return (
-    <>
+    <PageTransition>
       <Topbar title="Intern Update" subtitle="Field Progress Updates" />
 
       <section className="phoneWrap">
@@ -233,6 +234,6 @@ export default function InternUpdatePage() {
           </div>
         </div>
       ) : null}
-    </>
+    </PageTransition>
   );
 }

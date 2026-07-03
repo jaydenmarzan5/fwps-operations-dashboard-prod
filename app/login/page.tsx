@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import { PageTransition } from "@/components/PageTransition";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -34,6 +35,7 @@ export default function LoginPage() {
   }
 
   return (
+    <PageTransition>
     <main className="loginPage">
       <form className="loginCard" onSubmit={handleSignIn}>
         <Image src="/fwps-logo.png" alt="FWPS logo" width={64} height={64} />
@@ -72,5 +74,6 @@ export default function LoginPage() {
         </button>
       </form>
     </main>
-  );
+  </PageTransition>
+);
 }

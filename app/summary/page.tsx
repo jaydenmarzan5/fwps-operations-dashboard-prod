@@ -6,6 +6,7 @@ import type { Area, School, Update } from "@/types/database";
 import { progressPercent, sortSchoolsByProgress } from "@/lib/utils";
 import { Topbar } from "@/components/Topbar";
 import { UpdateCard } from "@/components/UpdateCard";
+import { PageTransition } from "@/components/PageTransition";
 
 const updateTypes = ["All Updates", "Completed COW", "Damaged Device", "General Note"];
 
@@ -91,7 +92,7 @@ export default function SummaryPage() {
   }, [visibleSchools]);
 
   return (
-    <>
+    <PageTransition>
       <Topbar title="End-of-Day Summary" subtitle="Daily Progress and Updates" />
 
       <section className="card panel summary">
@@ -136,6 +137,6 @@ export default function SummaryPage() {
           </div>
         </div>
       </section>
-    </>
+    </PageTransition>
   );
 }
