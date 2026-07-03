@@ -28,3 +28,17 @@ export type Update = {
   created_at: string;
   schools?: Pick<School, "id" | "name" | "code" | "area_id"> | null;
 };
+
+export type CowTotalChange = {
+  id: string;
+  school_id: string | null;
+  changed_by: string | null;
+  old_total: number;
+  new_total: number;
+  reason: string | null;
+  created_at: string;
+  profiles?: {
+    full_name: string | null;
+    role: string | null;
+  } | null;
+};

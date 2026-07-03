@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { getCurrentUserProfile } from "@/lib/auth";
-import type { Area, School, Update } from "@/types/database";
-import { progressPercent, remainingCows, sortSchoolsByProgress } from "@/lib/utils";
+import type { Area, School, Update, CowTotalChange } from "@/types/database";
+import { formatDateTime, progressPercent, remainingCows, sortSchoolsByProgress } from "@/lib/utils";
 import { Topbar } from "@/components/Topbar";
 import { ProgressBar } from "@/components/ProgressBar";
 import { SchoolStatus } from "@/components/SchoolStatus";
@@ -14,6 +14,7 @@ export default function SchoolDetailPage() {
   const [schools, setSchools] = useState<School[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
   const [updates, setUpdates] = useState<Update[]>([]);
+  const [cowTotalChanges, setCowTotalChanges] = useState<CowTotalChange[]>([]);
   const [selectedArea, setSelectedArea] = useState("Area 4");
   const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -24,15 +25,26 @@ export default function SchoolDetailPage() {
   const [savingTotalCows, setSavingTotalCows] = useState(false);
   
   async function loadData() {
-    const [{ data: schoolsData }, { data: areasData }, { data: updatesData }] = await Promise.all([
+    const [
+      { data: schoolsData },
+      { data: areasData },
+      { data: updatesData },
+      { data: cowTotalChangesData }
+    ] = await Promise.all([
       supabase.from("schools").select("*, areas(*)").order("name"),
       supabase.from("areas").select("*").order("name"),
       supabase.from("updates").select("*, schools(id, name, code, area_id)").order("created_at", { ascending: false }).limit(50),
+      supabase
+        .from("cow_total_changes")
+        .select("*, profiles(full_name, role)")
+        .order("created_at", { ascending: false })
+        .limit(50),
     ]);
 
     setSchools((schoolsData ?? []) as School[]);
     setAreas((areasData ?? []) as Area[]);
     setUpdates((updatesData ?? []) as Update[]);
+    setCowTotalChanges((cowTotalChangesData ?? []) as CowTotalChange[]);
   }
 
   async function loadProfile() {
@@ -48,6 +60,7 @@ export default function SchoolDetailPage() {
       .channel("school-detail")
       .on("postgres_changes", { event: "*", schema: "public", table: "schools" }, loadData)
       .on("postgres_changes", { event: "*", schema: "public", table: "updates" }, loadData)
+      .on("postgres_changes", { event: "*", schema: "public", table: "cow_total_changes" }, loadData)
       .subscribe();
 
     return () => {
@@ -79,6 +92,10 @@ export default function SchoolDetailPage() {
 
   const schoolUpdates = selectedSchool
     ? updates.filter((update) => update.school_id === selectedSchool.id)
+    : [];
+
+  const schoolCowTotalChanges = selectedSchool
+    ? cowTotalChanges.filter((change) => change.school_id === selectedSchool.id)
     : [];
 
   const canEditTotalCows = profile?.role === "supervisor" || profile?.role === "admin";
@@ -269,6 +286,27 @@ export default function SchoolDetailPage() {
                   <strong>{selectedSchool.completed_cows} of {selectedSchool.total_cows} COWs completed</strong>
                   <div>{remainingCows(selectedSchool)} COWs remaining. {selectedSchool.damaged_devices} damaged devices currently reported.</div>
                 </div>
+              </div>
+
+              <h3>COW Total Change History</h3>
+              <div className="notesList">
+                {schoolCowTotalChanges.length ? (
+                  schoolCowTotalChanges.map((change) => (
+                    <div className="noteCard" key={change.id}>
+                      <strong>
+                        Total COWs changed from {change.old_total} to {change.new_total}
+                      </strong>
+                      <div>
+                        {change.reason ? `Reason: ${change.reason}` : "No reason provided."}
+                      </div>
+                      <div className="noteMeta">
+                        {change.profiles?.full_name ?? "Unknown user"} · {formatDateTime(change.created_at)}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="empty">No COW total changes recorded for this school yet.</div>
+                )}
               </div>
 
               <h3>Recent Updates</h3>
