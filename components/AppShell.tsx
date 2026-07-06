@@ -6,7 +6,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { BarChart3, Building2, ClipboardList, FileText, LogOut } from "lucide-react";
+import { BarChart3, Building2, ClipboardList, FileText, LogOut, ShieldCheck } from "lucide-react";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -87,6 +87,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <FileText size={18} />
             <span>End-of-Day</span>
           </Link>
+          {profile?.role === "admin" ? (
+            <Link className={`navLink ${pathname === "/admin" ? "navLinkActive" : ""}`} href="/admin">
+              <ShieldCheck size={18} />
+              <span>Admin</span>
+            </Link>
+          ) : null}
         </nav>
 
         {profile ? (

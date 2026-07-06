@@ -745,3 +745,71 @@ textarea {
   min-height: 100px;
   resize: vertical;
 }
+
+.adminTable {
+  display: grid;
+  gap: 10px;
+}
+
+.adminTableHeader,
+.adminTableRow {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr auto;
+  gap: 14px;
+  align-items: center;
+}
+
+.adminTableHeader {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 900;
+  padding: 0 8px;
+}
+
+.adminTableRow {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px;
+  background: #fff;
+}
+
+.roleBadge {
+  width: fit-content;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: capitalize;
+}
+
+.role-admin {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.role-supervisor {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.role-intern {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.adminEditModal {
+  display: grid;
+  gap: 18px;
+}
+
+.adminEditModal label {
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  font-weight: 800;
+  text-align: left;
+}
+
+.adminEditModal select {
+  width: 100%;
+}
