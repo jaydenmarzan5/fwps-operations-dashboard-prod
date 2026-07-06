@@ -91,15 +91,30 @@ button {
 
 .navLink {
   color: #dbeafe;
-  padding: 13px;
-  border-radius: 12px;
-  font-weight: 750;
-  transition: background .2s ease, transform .2s ease;
+  text-decoration: none;
+  padding: 14px 16px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-weight: 800;
+  line-height: 1;
+  transition: background .18s ease, color .18s ease, transform .18s ease;
+}
+
+.navLink svg {
+  flex: 0 0 auto;
 }
 
 .navLink:hover {
-  background: rgba(255,255,255,.08);
-  transform: translateX(4px);
+  background: rgba(255,255,255,.09);
+  transform: translateX(2px);
+}
+
+.navLinkActive {
+  background: rgba(255,255,255,.14);
+  color: #fff;
+  box-shadow: inset 3px 0 0 #93c5fd;
 }
 
 .main {
@@ -661,10 +676,19 @@ textarea {
   border: 1px solid rgba(255, 255, 255, 0.16);
   background: rgba(255, 255, 255, 0.08);
   color: #dbeafe;
-  padding: 12px;
+  padding: 14px 16px;
   border-radius: 12px;
   font-weight: 800;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  line-height: 1;
+}
+
+.signOutButton svg {
+  flex: 0 0 auto;
 }
 
 .signOutButton:hover {

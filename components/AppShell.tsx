@@ -6,6 +6,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { BarChart3, Building2, ClipboardList, FileText, LogOut } from "lucide-react";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -29,9 +30,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         return;
       }
 
-    const userProfile = await getCurrentUserProfile();
-console.log("Loaded profile:", userProfile);
-setProfile(userProfile);
+      const userProfile = await getCurrentUserProfile();
+      setProfile(userProfile);
 
       setCheckingAuth(false);
     }
@@ -48,14 +48,14 @@ setProfile(userProfile);
     return <main>{children}</main>;
   }
 
-async function handleSignOut() {
-  const confirmed = window.confirm("Are you sure you want to sign out?");
+  async function handleSignOut() {
+    const confirmed = window.confirm("Are you sure you want to sign out?");
 
-  if (!confirmed) return;
+    if (!confirmed) return;
 
-  await supabase.auth.signOut();
-  router.replace("/login");
-}
+    await supabase.auth.signOut();
+    router.replace("/login");
+  }
   
   return (
     <div className="layout">
@@ -71,23 +71,35 @@ async function handleSignOut() {
         </div>
 
         <nav className="nav">
-          <Link className="navLink" href="/dashboard">Dashboard</Link>
-          <Link className="navLink" href="/schools">School Detail</Link>
-          <Link className="navLink" href="/update">Intern Update</Link>
-          <Link className="navLink" href="/summary">End-of-Day</Link>
+          <Link className={`navLink ${pathname === "/dashboard" ? "navLinkActive" : ""}`} href="/dashboard">
+            <BarChart3 size={18} />
+            <span>Dashboard</span>
+          </Link>
+          <Link className={`navLink ${pathname === "/schools" ? "navLinkActive" : ""}`} href="/schools">
+            <Building2 size={18} />
+            <span>School Detail</span>
+          </Link>
+          <Link className={`navLink ${pathname === "/update" ? "navLinkActive" : ""}`} href="/update">
+            <ClipboardList size={18} />
+            <span>Intern Update</span>
+          </Link>
+          <Link className={`navLink ${pathname === "/summary" ? "navLinkActive" : ""}`} href="/summary">
+            <FileText size={18} />
+            <span>End-of-Day</span>
+          </Link>
         </nav>
 
-{profile ? (
-  <div className="userRoleCard">
-    <strong>{profile.full_name}</strong>
-    <span>{profile.role}</span>
-  </div>
-) : null}
+        {profile ? (
+          <div className="userRoleCard">
+            <strong>{profile.full_name}</strong>
+            <span>{profile.role}</span>
+          </div>
+        ) : null}
 
         <button className="signOutButton" onClick={handleSignOut}>
-  Sign Out
-
-</button>
+          <LogOut size={18} />
+          <span>Sign Out</span>
+        </button>
       </aside>
 
       <main className="main">{children}</main>
