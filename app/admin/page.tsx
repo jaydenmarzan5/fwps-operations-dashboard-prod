@@ -22,6 +22,7 @@ export default function AdminPage() {
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
   const [roleDraft, setRoleDraft] = useState<Profile["role"]>("intern");
   const [savingRole, setSavingRole] = useState(false);
+  const [currentProfile, setCurrentProfile] = useState<Profile | null>(null);
 
   async function loadProfiles() {
     const { data, error } = await supabase
@@ -45,6 +46,11 @@ export default function AdminPage() {
   async function saveRoleChange() {
     if (!editingProfile) return;
 
+    if (currentProfile?.id === editingProfile.id && roleDraft !== "admin") {
+      alert("You cannot remove your own admin access.");
+      return;
+    }
+
     setSavingRole(true);
 
     const { error } = await supabase
@@ -55,10 +61,10 @@ export default function AdminPage() {
     setSavingRole(false);
 
     if (error) {
-  console.error(error);
-  alert(error.message);
-  return;
-}
+      console.error(error);
+      alert(error.message);
+      return;
+    }
 
     setProfiles((currentProfiles) =>
       currentProfiles.map((profile) =>
@@ -78,6 +84,7 @@ export default function AdminPage() {
         return;
       }
 
+      setCurrentProfile(userProfile as Profile);
       await loadProfiles();
       setChecking(false);
     }
@@ -115,8 +122,13 @@ export default function AdminPage() {
               <strong>{profile.full_name ?? "Unnamed User"}</strong>
               <span className={`roleBadge role-${profile.role}`}>{profile.role}</span>
               <span>{new Date(profile.created_at).toLocaleDateString()}</span>
-              <button className="secondaryButton" onClick={() => openEditProfile(profile)}>
-                Edit
+              <button
+                className="secondaryButton"
+                onClick={() => openEditProfile(profile)}
+                disabled={currentProfile?.id === profile.id}
+                title={currentProfile?.id === profile.id ? "You cannot edit your own admin role." : "Edit user role"}
+              >
+                {currentProfile?.id === profile.id ? "Current User" : "Edit"}
               </button>
             </div>
           ))}
