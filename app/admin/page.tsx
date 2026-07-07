@@ -23,6 +23,9 @@ export default function AdminPage() {
   const [roleDraft, setRoleDraft] = useState<Profile["role"]>("intern");
   const [savingRole, setSavingRole] = useState(false);
   const [currentProfile, setCurrentProfile] = useState<Profile | null>(null);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetConfirmation, setResetConfirmation] = useState("");
+  const [resettingDashboard, setResettingDashboard] = useState(false);
 
   async function loadProfiles() {
     const { data, error } = await supabase
@@ -73,6 +76,50 @@ export default function AdminPage() {
     );
 
     setEditingProfile(null);
+  }
+
+  async function resetDashboard() {
+    if (resetConfirmation !== "RESET") return;
+
+    setResettingDashboard(true);
+
+    const { error: updatesError } = await supabase.from("updates").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+
+    if (updatesError) {
+      setResettingDashboard(false);
+      console.error(updatesError);
+      alert(updatesError.message);
+      return;
+    }
+
+    const { error: cowHistoryError } = await supabase
+      .from("cow_total_changes")
+      .delete()
+      .neq("id", "00000000-0000-0000-0000-000000000000");
+
+    if (cowHistoryError) {
+      setResettingDashboard(false);
+      console.error(cowHistoryError);
+      alert(cowHistoryError.message);
+      return;
+    }
+
+    const { error: schoolsError } = await supabase
+      .from("schools")
+      .update({ completed_cows: 0, damaged_devices: 0 })
+      .neq("id", "00000000-0000-0000-0000-000000000000");
+
+    setResettingDashboard(false);
+
+    if (schoolsError) {
+      console.error(schoolsError);
+      alert(schoolsError.message);
+      return;
+    }
+
+    setShowResetModal(false);
+    setResetConfirmation("");
+    alert("Dashboard reset complete.");
   }
 
   useEffect(() => {
@@ -138,7 +185,19 @@ export default function AdminPage() {
       <section className="card panel">
         <h2>System Actions</h2>
         <p className="muted">Reset dashboard data before a pilot or refresh cycle.</p>
-        <div className="empty">Reset tools coming next.</div>
+
+        <div className="adminActionCard">
+          <div>
+            <strong>Reset Dashboard</strong>
+            <p className="muted">
+              Clears intern updates and audit history, then resets completed COWs and damaged device counts to 0.
+              Schools, users, roles, and total COW counts are preserved.
+            </p>
+          </div>
+          <button className="dangerButton" onClick={() => setShowResetModal(true)}>
+            Reset Dashboard
+          </button>
+        </div>
       </section>
 
       <AnimatePresence>
@@ -177,6 +236,63 @@ export default function AdminPage() {
                 </button>
                 <button className="primaryButton" onClick={saveRoleChange} disabled={savingRole}>
                   {savingRole ? "Saving..." : "Save Role"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showResetModal ? (
+          <motion.div
+            className="modalOverlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+          >
+            <motion.div
+              className="modal adminEditModal"
+              initial={{ opacity: 0, y: 16, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.96 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+            >
+              <div>
+                <h2>Reset Dashboard</h2>
+                <p className="muted">
+                  This will delete all intern updates and COW total audit history. It will also reset completed COWs
+                  and damaged device counts to 0. Schools, users, roles, and total COW counts will not be changed.
+                </p>
+              </div>
+
+              <label>
+                Type RESET to confirm
+                <input
+                  value={resetConfirmation}
+                  onChange={(e) => setResetConfirmation(e.target.value)}
+                  placeholder="RESET"
+                />
+              </label>
+
+              <div className="modalActions">
+                <button
+                  className="secondaryButton"
+                  onClick={() => {
+                    setShowResetModal(false);
+                    setResetConfirmation("");
+                  }}
+                  disabled={resettingDashboard}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="dangerButton"
+                  onClick={resetDashboard}
+                  disabled={resetConfirmation !== "RESET" || resettingDashboard}
+                >
+                  {resettingDashboard ? "Resetting..." : "Reset Dashboard"}
                 </button>
               </div>
             </motion.div>
