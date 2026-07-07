@@ -1,14 +1,32 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
+export const runtime = "nodejs";
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 type Role = "intern" | "supervisor" | "admin";
 
+const MAX_NAME_LENGTH = 120;
+const MAX_EMAIL_LENGTH = 254;
+const MIN_PASSWORD_LENGTH = 8;
+
 function isValidRole(role: string): role is Role {
   return ["intern", "supervisor", "admin"].includes(role);
+}
+
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+async function readJsonBody(request: Request) {
+  try {
+    return await request.json();
+  } catch {
+    return null;
+  }
 }
 
 async function verifyAdmin(request: Request) {
@@ -22,7 +40,7 @@ async function verifyAdmin(request: Request) {
   }
 
   const authHeader = request.headers.get("authorization");
-  const token = authHeader?.replace("Bearer ", "");
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
 
   if (!token) {
     return {
@@ -38,7 +56,12 @@ async function verifyAdmin(request: Request) {
     },
   });
 
-  const serviceClient = createClient(supabaseUrl, supabaseServiceRoleKey);
+  const serviceClient = createClient(supabaseUrl, supabaseServiceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
 
   const {
     data: { user },
@@ -75,7 +98,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unable to initialize admin client." }, { status: 500 });
   }
 
-  const body = await request.json();
+  const body = await readJsonBody(request);
+
+  if (!body) {
+    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+  }
+
   const fullName = String(body.fullName ?? "").trim();
   const email = String(body.email ?? "").trim().toLowerCase();
   const password = String(body.password ?? "");
@@ -85,12 +113,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Full name, email, and password are required." }, { status: 400 });
   }
 
+  if (fullName.length > MAX_NAME_LENGTH) {
+    return NextResponse.json({ error: "Full name is too long." }, { status: 400 });
+  }
+
+  if (email.length > MAX_EMAIL_LENGTH || !isValidEmail(email)) {
+    return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
+  }
+
   if (!isValidRole(role)) {
     return NextResponse.json({ error: "Invalid role selected." }, { status: 400 });
   }
 
-  if (password.length < 6) {
-    return NextResponse.json({ error: "Password must be at least 6 characters." }, { status: 400 });
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    return NextResponse.json({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` }, { status: 400 });
   }
 
   const { data: createdUserData, error: createUserError } = await serviceClient.auth.admin.createUser({
@@ -143,7 +179,12 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Unable to initialize admin client." }, { status: 500 });
   }
 
-  const body = await request.json();
+  const body = await readJsonBody(request);
+
+  if (!body) {
+    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+  }
+
   const userId = String(body.userId ?? "").trim();
 
   if (!userId) {
@@ -180,13 +221,19 @@ export async function DELETE(request: Request) {
   const { error: profileDeleteError } = await serviceClient.from("profiles").delete().eq("id", userId);
 
   if (profileDeleteError) {
-    return NextResponse.json({ error: profileDeleteError.message }, { status: 400 });
+    return NextResponse.json(
+      { error: profileDeleteError.message ?? "Unable to delete user profile." },
+      { status: 400 }
+    );
   }
 
   const { error: authDeleteError } = await serviceClient.auth.admin.deleteUser(userId);
 
   if (authDeleteError) {
-    return NextResponse.json({ error: authDeleteError.message }, { status: 400 });
+    return NextResponse.json(
+      { error: authDeleteError.message ?? "Unable to delete user login." },
+      { status: 400 }
+    );
   }
 
   return NextResponse.json({ success: true });
