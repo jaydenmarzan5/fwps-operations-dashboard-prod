@@ -844,3 +844,14 @@ textarea {
   cursor: not-allowed;
   opacity: 0.55;
 }
+
+.adminUserActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.dangerButtonSmall {
+  padding: 12px;
+}
