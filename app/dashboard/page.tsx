@@ -19,12 +19,15 @@ export default function DashboardPage() {
 
   async function loadData() {
     const [{ data: schoolsData, error: schoolsError }, { data: areasData }] = await Promise.all([
-      supabase.from("schools").select("*, areas(*)").order("name"),
-      supabase.from("areas").select("*").order("name"),
+      supabase
+        .from("schools")
+        .select("id, name, code, area_id, total_cows, completed_cows, damaged_devices, created_at, updated_at, areas(id, name, created_at)")
+        .order("name"),
+      supabase.from("areas").select("id, name, created_at").order("name"),
     ]);
 
     if (schoolsError) console.error(schoolsError);
-    setSchools((schoolsData ?? []) as School[]);
+    setSchools((schoolsData ?? []) as unknown as School[]);
     setAreas((areasData ?? []) as Area[]);
     setLoading(false);
   }

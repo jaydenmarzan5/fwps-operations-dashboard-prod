@@ -27,14 +27,20 @@ export default function SummaryPage() {
 
   async function loadData() {
     const [{ data: schoolsData }, { data: areasData }, { data: updatesData }] = await Promise.all([
-      supabase.from("schools").select("*, areas(*)").order("name"),
-      supabase.from("areas").select("*").order("name"),
-      supabase.from("updates").select("*, schools(id, name, code, area_id)").order("created_at", { ascending: false }),
+      supabase
+        .from("schools")
+        .select("id, name, code, area_id, total_cows, completed_cows, damaged_devices, updated_at, areas(id, name)")
+        .order("name"),
+      supabase.from("areas").select("id, name").order("name"),
+      supabase
+        .from("updates")
+        .select("id, school_id, user_id, cows_completed, damaged_devices, room_number, notes, created_at, schools(id, name, code, area_id)")
+        .order("created_at", { ascending: false }),
     ]);
 
-    setSchools((schoolsData ?? []) as School[]);
-    setAreas((areasData ?? []) as Area[]);
-    setUpdates((updatesData ?? []) as Update[]);
+    setSchools((schoolsData ?? []) as unknown as School[]);
+    setAreas((areasData ?? []) as unknown as Area[]);
+    setUpdates((updatesData ?? []) as unknown as Update[]);
   }
 
   useEffect(() => {

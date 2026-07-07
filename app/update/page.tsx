@@ -28,12 +28,15 @@ export default function InternUpdatePage() {
 
   async function loadData() {
     const [{ data: schoolsData }, { data: areasData }] = await Promise.all([
-      supabase.from("schools").select("*, areas(*)").order("name"),
-      supabase.from("areas").select("*").order("name"),
+      supabase
+        .from("schools")
+        .select("id, name, code, area_id, total_cows, completed_cows, damaged_devices, updated_at, areas(id, name)")
+        .order("name"),
+      supabase.from("areas").select("id, name").order("name"),
     ]);
 
-    setSchools((schoolsData ?? []) as School[]);
-    setAreas((areasData ?? []) as Area[]);
+    setSchools((schoolsData ?? []) as unknown as School[]);
+    setAreas((areasData ?? []) as unknown as Area[]);
   }
 
   useEffect(() => {

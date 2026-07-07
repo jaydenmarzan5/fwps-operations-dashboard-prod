@@ -32,24 +32,27 @@ export default function SchoolDetailPage() {
   async function loadData() {
     const [{ data: schoolsData }, { data: areasData }, { data: updatesData }, { data: cowTotalChangesData }] =
       await Promise.all([
-        supabase.from("schools").select("*, areas(*)").order("name"),
-        supabase.from("areas").select("*").order("name"),
+        supabase
+          .from("schools")
+          .select("id, name, code, area_id, total_cows, completed_cows, damaged_devices, created_at, updated_at, areas(id, name, created_at)")
+          .order("name"),
+        supabase.from("areas").select("id, name, created_at").order("name"),
         supabase
           .from("updates")
-          .select("*, schools(id, name, code, area_id)")
+          .select("id, school_id, user_id, cows_completed, damaged_devices, room_number, notes, created_at, schools(id, name, code, area_id)")
           .order("created_at", { ascending: false })
           .limit(50),
         supabase
           .from("cow_total_changes")
-          .select("*, profiles(full_name, role)")
+          .select("id, school_id, changed_by, old_total, new_total, reason, created_at, profiles(full_name, role)")
           .order("created_at", { ascending: false })
           .limit(50),
       ]);
 
-    setSchools((schoolsData ?? []) as School[]);
+    setSchools((schoolsData ?? []) as unknown as School[]);
     setAreas((areasData ?? []) as Area[]);
-    setUpdates((updatesData ?? []) as Update[]);
-    setCowTotalChanges((cowTotalChangesData ?? []) as CowTotalChange[]);
+    setUpdates((updatesData ?? []) as unknown as Update[]);
+    setCowTotalChanges((cowTotalChangesData ?? []) as unknown as CowTotalChange[]);
   }
 
   async function loadProfile() {
