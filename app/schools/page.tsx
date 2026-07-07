@@ -26,6 +26,8 @@ export default function SchoolDetailPage() {
   const [totalCowsDraft, setTotalCowsDraft] = useState("");
   const [totalCowsReason, setTotalCowsReason] = useState("");
   const [savingTotalCows, setSavingTotalCows] = useState(false);
+  const [markingComplete, setMarkingComplete] = useState(false);
+  const [savingMarkComplete, setSavingMarkComplete] = useState(false);
 
   async function loadData() {
     const [{ data: schoolsData }, { data: areasData }, { data: updatesData }, { data: cowTotalChangesData }] =
@@ -166,6 +168,33 @@ export default function SchoolDetailPage() {
     setTotalCowsReason("");
   }
 
+  async function markSchoolComplete() {
+    if (!selectedSchool) return;
+
+    setSavingMarkComplete(true);
+
+    const { error } = await supabase
+      .from("schools")
+      .update({ completed_cows: selectedSchool.total_cows })
+      .eq("id", selectedSchool.id);
+
+    setSavingMarkComplete(false);
+
+    if (error) {
+      console.error(error);
+      alert("Unable to mark school complete. Please try again.");
+      return;
+    }
+
+    setSchools((currentSchools) =>
+      currentSchools.map((school) =>
+        school.id === selectedSchool.id ? { ...school, completed_cows: selectedSchool.total_cows } : school
+      )
+    );
+
+    setMarkingComplete(false);
+  }
+
   return (
     <PageTransition>
       <Topbar title="School Detail" subtitle="School and Area Progress" />
@@ -269,6 +298,11 @@ export default function SchoolDetailPage() {
                   {canEditTotalCows ? (
                     <button className="secondaryButton" onClick={startEditingTotalCows}>
                       Edit Total COWs
+                    </button>
+                  ) : null}
+                  {canEditTotalCows && selectedSchool.completed_cows < selectedSchool.total_cows ? (
+                    <button className="secondaryButton" onClick={() => setMarkingComplete(true)}>
+                      Mark Complete
                     </button>
                   ) : null}
                   <button className="secondaryButton" onClick={() => setSelectedSchoolId(null)}>
@@ -378,6 +412,46 @@ export default function SchoolDetailPage() {
                 </button>
                 <button className="primaryButton" onClick={saveTotalCows} disabled={savingTotalCows}>
                   {savingTotalCows ? "Saving..." : "Save Change"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+      <AnimatePresence>
+        {markingComplete && selectedSchool ? (
+          <motion.div
+            className="modalOverlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+          >
+            <motion.div
+              className="modal cowEditModal"
+              initial={{ opacity: 0, y: 16, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.96 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+            >
+              <div>
+                <h2>Mark School Complete</h2>
+                <p className="muted">
+                  This will set {selectedSchool.name} to {selectedSchool.total_cows} of {selectedSchool.total_cows} COWs completed.
+                </p>
+              </div>
+
+              <div className="noteCard">
+                <strong>This action will:</strong>
+                <div>Set progress to 100% and leave total COWs and damaged devices unchanged.</div>
+              </div>
+
+              <div className="modalActions">
+                <button className="secondaryButton" onClick={() => setMarkingComplete(false)} disabled={savingMarkComplete}>
+                  Cancel
+                </button>
+                <button className="primaryButton" onClick={markSchoolComplete} disabled={savingMarkComplete}>
+                  {savingMarkComplete ? "Saving..." : "Mark Complete"}
                 </button>
               </div>
             </motion.div>
