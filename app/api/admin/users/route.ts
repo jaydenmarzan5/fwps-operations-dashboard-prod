@@ -12,6 +12,10 @@ type Role = "intern" | "supervisor" | "admin";
 const MAX_NAME_LENGTH = 120;
 const MAX_EMAIL_LENGTH = 254;
 const MIN_PASSWORD_LENGTH = 8;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_REQUESTS = 10;
+
+const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
 
 function isValidRole(role: string): role is Role {
   return ["intern", "supervisor", "admin"].includes(role);
@@ -27,6 +31,50 @@ async function readJsonBody(request: Request) {
   } catch {
     return null;
   }
+}
+
+function getClientIp(request: Request) {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  const realIp = request.headers.get("x-real-ip");
+
+  if (forwardedFor) {
+    return forwardedFor.split(",")[0]?.trim() || "unknown";
+  }
+
+  return realIp ?? "unknown";
+}
+
+function checkRateLimit(request: Request) {
+  const now = Date.now();
+  const ip = getClientIp(request);
+  const key = `${request.method}:${ip}`;
+  const current = rateLimitStore.get(key);
+
+  if (!current || current.resetAt <= now) {
+    rateLimitStore.set(key, {
+      count: 1,
+      resetAt: now + RATE_LIMIT_WINDOW_MS,
+    });
+    return null;
+  }
+
+  if (current.count >= RATE_LIMIT_MAX_REQUESTS) {
+    const retryAfterSeconds = Math.ceil((current.resetAt - now) / 1000);
+
+    return NextResponse.json(
+      { error: "Too many requests. Please try again shortly." },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(retryAfterSeconds),
+        },
+      }
+    );
+  }
+
+  current.count += 1;
+  rateLimitStore.set(key, current);
+  return null;
 }
 
 async function verifyAdmin(request: Request) {
@@ -90,6 +138,9 @@ async function verifyAdmin(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const rateLimitResponse = checkRateLimit(request);
+
+  if (rateLimitResponse) return rateLimitResponse;
   const { errorResponse, serviceClient } = await verifyAdmin(request);
 
   if (errorResponse) return errorResponse;
@@ -171,6 +222,9 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const rateLimitResponse = checkRateLimit(request);
+
+  if (rateLimitResponse) return rateLimitResponse;
   const { errorResponse, user, serviceClient } = await verifyAdmin(request);
 
   if (errorResponse) return errorResponse;
