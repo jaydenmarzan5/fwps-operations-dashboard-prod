@@ -92,37 +92,30 @@ export default function AdminPage() {
 
     setResettingDashboard(true);
 
-    const { error: updatesError } = await supabase.from("updates").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
 
-    if (updatesError) {
+    if (!token) {
       setResettingDashboard(false);
-      console.error(updatesError);
-      alert(updatesError.message);
+      alert("You must be signed in as an admin to reset the dashboard.");
       return;
     }
 
-    const { error: cowHistoryError } = await supabase
-      .from("cow_total_changes")
-      .delete()
-      .neq("id", "00000000-0000-0000-0000-000000000000");
+    const response = await fetch("/api/admin/reset", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ confirmation: resetConfirmation }),
+    });
 
-    if (cowHistoryError) {
-      setResettingDashboard(false);
-      console.error(cowHistoryError);
-      alert(cowHistoryError.message);
-      return;
-    }
-
-    const { error: schoolsError } = await supabase
-      .from("schools")
-      .update({ completed_cows: 0, damaged_devices: 0 })
-      .neq("id", "00000000-0000-0000-0000-000000000000");
+    const result = await response.json();
 
     setResettingDashboard(false);
 
-    if (schoolsError) {
-      console.error(schoolsError);
-      alert(schoolsError.message);
+    if (!response.ok) {
+      alert(result.error ?? "Unable to reset dashboard.");
       return;
     }
 
@@ -463,7 +456,7 @@ export default function AdminPage() {
                   type="password"
                   value={newUserPassword}
                   onChange={(e) => setNewUserPassword(e.target.value)}
-                  placeholder="At least 6 characters"
+                  placeholder="At least 8 characters"
                 />
               </label>
 
