@@ -72,31 +72,17 @@ export default function InternUpdatePage() {
     if (!pendingAction) return;
 
     const { school, field, amount } = pendingAction;
-    const nextValue = Math.max(0, field === "completed_cows"
-      ? Math.min(school.total_cows, school.completed_cows + amount)
-      : school.damaged_devices + amount
-    );
 
-    const { error: schoolError } = await supabase
-      .from("schools")
-      .update({ [field]: nextValue, updated_at: new Date().toISOString() })
-      .eq("id", school.id);
-
-    if (schoolError) {
-      alert(schoolError.message);
-      return;
-    }
-
-    const { error: updateError } = await supabase.from("updates").insert({
-      school_id: school.id,
-      cows_completed: field === "completed_cows" ? amount : 0,
-      damaged_devices: field === "damaged_devices" ? amount : 0,
-      room_number: room || null,
-      notes: confirmNote || pendingAction.label,
+    const { error } = await supabase.rpc("submit_school_update", {
+      target_school_id: school.id,
+      update_field: field,
+      update_amount: amount,
+      update_room: room.trim() || null,
+      update_note: confirmNote.trim() || pendingAction.label,
     });
 
-    if (updateError) {
-      alert(updateError.message);
+    if (error) {
+      alert(error.message);
       return;
     }
 
@@ -224,20 +210,20 @@ export default function InternUpdatePage() {
               exit={{ opacity: 0, y: 12, scale: 0.96 }}
               transition={{ duration: 0.18, ease: "easeOut" }}
             >
-            <h2>Confirm Update</h2>
-            <p className="muted">Apply <strong>{pendingAction.label}</strong> to <strong>{pendingAction.school.name} ({pendingAction.school.code})</strong>?</p>
-            <label>
-              Room / Location
-              <input value={room} onChange={(e) => setRoom(e.target.value)} placeholder="Room 214, Library, Media Center" />
-            </label>
-            <label>
-              Optional Note
-              <textarea value={confirmNote} onChange={(e) => setConfirmNote(e.target.value)} placeholder="Add any additional context..." />
-            </label>
-            <div className="modalActions">
-              <button className="secondaryButton" onClick={() => setPendingAction(null)}>Cancel</button>
-              <button className="primaryButton" onClick={saveConfirmedUpdate}>Confirm Update</button>
-            </div>
+              <h2>Confirm Update</h2>
+              <p className="muted">Apply <strong>{pendingAction.label}</strong> to <strong>{pendingAction.school.name} ({pendingAction.school.code})</strong>?</p>
+              <label>
+                Room / Location
+                <input value={room} onChange={(e) => setRoom(e.target.value)} placeholder="Room 214, Library, Media Center" />
+              </label>
+              <label>
+                Optional Note
+                <textarea value={confirmNote} onChange={(e) => setConfirmNote(e.target.value)} placeholder="Add any additional context..." />
+              </label>
+              <div className="modalActions">
+                <button className="secondaryButton" onClick={() => setPendingAction(null)}>Cancel</button>
+                <button className="primaryButton" onClick={saveConfirmedUpdate}>Confirm Update</button>
+              </div>
             </motion.div>
           </motion.div>
         ) : null}
