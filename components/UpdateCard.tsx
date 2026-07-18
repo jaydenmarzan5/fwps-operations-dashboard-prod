@@ -9,7 +9,15 @@ function updateLabel(update: Update) {
   return "General Note";
 }
 
-export function UpdateCard({ update }: { update: Update }) {
+export function UpdateCard({
+  update,
+  canManage = false,
+  onDelete,
+}: {
+  update: Update;
+  canManage?: boolean;
+  onDelete?: (update: Update) => void;
+}) {
   const school = update.schools;
   const submitter = (
     update as Update & { profiles?: { full_name: string | null } | null }
@@ -17,10 +25,21 @@ export function UpdateCard({ update }: { update: Update }) {
 
   return (
     <div className="noteCard">
-      <strong>
-        {school?.name ?? "Unknown School"}
-        {school?.code ? <span className="codePill">{school.code}</span> : null}
-      </strong>
+      <div className="noteHeader">
+        <strong>
+          {school?.name ?? "Unknown School"}
+          {school?.code ? <span className="codePill">{school.code}</span> : null}
+        </strong>
+        {canManage && onDelete ? (
+          <button
+            className="dangerButton"
+            onClick={() => onDelete(update)}
+            title="Delete update"
+          >
+            Delete
+          </button>
+        ) : null}
+      </div>
       <div>
         <span className="typePill">{updateLabel(update)}</span>
         {update.room_number ? <span className="roomPill">{update.room_number}</span> : null}

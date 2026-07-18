@@ -24,6 +24,27 @@ export default function SummaryPage() {
   const [selectedSchoolId, setSelectedSchoolId] = useState("All Schools");
   const [selectedType, setSelectedType] = useState("All Updates");
   const [search, setSearch] = useState("");
+  const [currentRole, setCurrentRole] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Update | null>(null);
+  const [deletingUpdate, setDeletingUpdate] = useState(false);
+
+  async function loadProfile() {
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData.user;
+
+    if (!user) {
+      setCurrentRole(null);
+      return;
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    setCurrentRole(profile?.role ?? null);
+  }
 
   async function loadData() {
     const [
@@ -63,8 +84,29 @@ export default function SummaryPage() {
     setUpdates(updatesWithSubmitters as unknown as Update[]);
   }
 
+  async function deleteUpdate() {
+    if (!pendingDelete || currentRole !== "admin") return;
+
+    setDeletingUpdate(true);
+
+    const { error } = await supabase.rpc("delete_update_and_reverse", {
+      target_update_id: pendingDelete.id,
+    });
+
+    setDeletingUpdate(false);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    setPendingDelete(null);
+    await loadData();
+  }
+
   useEffect(() => {
     loadData();
+    loadProfile();
 
     const channel = supabase
       .channel("summary")
@@ -159,10 +201,57 @@ export default function SummaryPage() {
         <div className="notesSection">
           <h3>Updates</h3>
           <div className="notesList">
-            {visibleUpdates.length ? visibleUpdates.map((update) => <UpdateCard key={update.id} update={update} />) : <div className="empty">No updates match the current filters.</div>}
+            {visibleUpdates.length ? (
+              visibleUpdates.map((update) => (
+                <UpdateCard
+                  key={update.id}
+                  update={update}
+                  canManage={currentRole === "admin"}
+                  onDelete={setPendingDelete}
+                />
+              ))
+            ) : (
+              <div className="empty">No updates match the current filters.</div>
+            )}
           </div>
         </div>
       </section>
+      {pendingDelete ? (
+        <div className="modalOverlay">
+          <div className="modal">
+            <h2>Delete Update</h2>
+            <p className="muted">
+              Are you sure you want to delete this update?
+            </p>
+
+            <ul className="muted">
+              <li>Remove the update from the activity log</li>
+              <li>Reverse its effect on COW or damaged-device totals</li>
+              <li>Permanently delete the record</li>
+            </ul>
+
+            <p className="muted">
+              <strong>This action cannot be undone.</strong>
+            </p>
+            <div className="modalActions">
+              <button
+                className="secondaryButton"
+                onClick={() => setPendingDelete(null)}
+                disabled={deletingUpdate}
+              >
+                Cancel
+              </button>
+              <button
+                className="dangerButton"
+                onClick={deleteUpdate}
+                disabled={deletingUpdate}
+              >
+                {deletingUpdate ? "Deleting..." : "Delete and Reverse"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </PageTransition>
   );
 }
