@@ -11,6 +11,9 @@ function updateLabel(update: Update) {
 
 export function UpdateCard({ update }: { update: Update }) {
   const school = update.schools;
+  const submitter = (
+    update as Update & { profiles?: { full_name: string | null } | null }
+  ).profiles?.full_name ?? "Unknown user";
 
   return (
     <div className="noteCard">
@@ -23,7 +26,9 @@ export function UpdateCard({ update }: { update: Update }) {
         {update.room_number ? <span className="roomPill">{update.room_number}</span> : null}
       </div>
       <div>{update.notes || "No note provided."}</div>
-      <div className="noteMeta">{formatDateTime(update.created_at)}</div>
+      <div className="noteMeta">
+        {submitter} • {formatDateTime(update.created_at)}
+      </div>
     </div>
   );
 }
