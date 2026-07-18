@@ -30,28 +30,48 @@ export default function SchoolDetailPage() {
   const [savingMarkComplete, setSavingMarkComplete] = useState(false);
 
   async function loadData() {
-    const [{ data: schoolsData }, { data: areasData }, { data: updatesData }, { data: cowTotalChangesData }] =
-      await Promise.all([
-        supabase
-          .from("schools")
-          .select("id, name, code, area_id, total_cows, completed_cows, damaged_devices, created_at, updated_at, areas(id, name, created_at)")
-          .order("name"),
-        supabase.from("areas").select("id, name, created_at").order("name"),
-        supabase
-          .from("updates")
-          .select("id, school_id, user_id, cows_completed, damaged_devices, room_number, notes, created_at, schools(id, name, code, area_id)")
-          .order("created_at", { ascending: false })
-          .limit(50),
-        supabase
-          .from("cow_total_changes")
-          .select("id, school_id, changed_by, old_total, new_total, reason, created_at, profiles(full_name, role)")
-          .order("created_at", { ascending: false })
-          .limit(50),
-      ]);
+    const [
+      { data: schoolsData },
+      { data: areasData },
+      { data: updatesData },
+      { data: cowTotalChangesData },
+      { data: submittersData },
+    ] = await Promise.all([
+      supabase
+        .from("schools")
+        .select("id, name, code, area_id, total_cows, completed_cows, damaged_devices, created_at, updated_at, areas(id, name, created_at)")
+        .order("name"),
+      supabase.from("areas").select("id, name, created_at").order("name"),
+      supabase
+        .from("updates")
+        .select("id, school_id, user_id, cows_completed, damaged_devices, room_number, notes, created_at, schools(id, name, code, area_id)")
+        .order("created_at", { ascending: false })
+        .limit(50),
+      supabase
+        .from("cow_total_changes")
+        .select("id, school_id, changed_by, old_total, new_total, reason, created_at, profiles(full_name, role)")
+        .order("created_at", { ascending: false })
+        .limit(50),
+      supabase.rpc("get_update_submitters"),
+    ]);
+
+    const submitterMap = new Map<string, string | null>(
+      (submittersData ?? []).map((profile: { id: string; full_name: string | null }) => [
+        profile.id,
+        profile.full_name,
+      ])
+    );
+
+    const updatesWithSubmitters = (updatesData ?? []).map((update) => ({
+      ...update,
+      profiles: update.user_id
+        ? { full_name: submitterMap.get(update.user_id) ?? null }
+        : null,
+    }));
 
     setSchools((schoolsData ?? []) as unknown as School[]);
     setAreas((areasData ?? []) as Area[]);
-    setUpdates((updatesData ?? []) as unknown as Update[]);
+    setUpdates(updatesWithSubmitters as unknown as Update[]);
     setCowTotalChanges((cowTotalChangesData ?? []) as unknown as CowTotalChange[]);
   }
 
